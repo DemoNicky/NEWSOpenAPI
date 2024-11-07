@@ -1,0 +1,2 @@
+db.db_file.find().pretty()
+use file

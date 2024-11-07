@@ -1,0 +1,128 @@
+version: '3.8'
+
+services:
+  discovery-server:
+    build:
+      context: ./discovery-server  # Path ke folder discovery-server yang berisi Dockerfile
+      dockerfile: Dockerfile
+    image: discovery-server:latest
+    container_name: discovery-server
+    ports:
+      - "8761:8761"
+    environment:
+      - SPRING_APPLICATION_NAME=discovery-server
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
+      - EUREKA_CLIENT_FETCH_REGISTRY=false
+      - EUREKA_INSTANCE_HOSTNAME=discovery-server
+    networks:
+      - dobudobu
+
+  article-service:
+    build:
+      context: ./article-management-service  # Path ke folder article-service yang berisi Dockerfile
+      dockerfile: Dockerfile
+    image: article-service:latest
+    container_name: article-management-service
+    ports:
+      - "8081:8081"
+    environment:
+      JDBC_DATABASE_URL: jdbc:postgresql://db:5432/db_article
+      JDBC_DATABASE_USERNAME: postgres
+      JDBC_DATABASE_PASSWORD: abcdef
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+    depends_on:
+      - db
+      - discovery-server
+    networks:
+      - dobudobu
+
+  file-service:
+    build:
+      context: ./file-service  # Path ke folder file-service yang berisi Dockerfile
+      dockerfile: Dockerfile
+    image: file-service:latest
+    container_name: file-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://root:root@mongodb:27017/db_file?authSource=admin
+      SPRING_APPLICATION_NAME: file-service
+      SPRING_CLOUDINARY_CLOUD_NAME: duzctbrt5
+      SPRING_CLOUDINARY_CLOUD_API_KEY: 768613334472254
+      SPRING_CLOUDINARY_CLOUD_API_SECRET: YbuUq2xSiLvsOUJiy3dNblxOhAE
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+    depends_on:
+      - mongodb
+      - discovery-server
+    networks:
+      - dobudobu
+
+  gateway-server:
+    build:
+      context: ./gateway-server  # Path ke folder gateway-server yang berisi Dockerfile
+      dockerfile: Dockerfile
+    image: gateway-server:latest
+    container_name: gateway-server
+    ports:
+      - "9000:9000"
+    environment:
+      SPRING_APPLICATION_NAME: gateway-server
+      SPRING_CLOUD_GATEWAY_DISCOVERY_LOCATOR_ENABLED: true
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      EUREKA_CLIENT_REGISTER_WITH_EUREKA: true
+      EUREKA_CLIENT_FETCH_REGISTRY: true
+    depends_on:
+      - discovery-server
+    networks:
+      - dobudobu
+
+  db:
+    image: postgres:latest
+    container_name: postgres-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: abcdef
+      POSTGRES_DB: db_article
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - dobudobu
+
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+      MONGO_INITDB_DATABASE: db_file
+    volumes:
+      - ./data:/data/db  # Volume untuk data MongoDB
+    networks:
+      - dobudobu
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=root
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=password
+      - ME_CONFIG_MONGODB_URL=mongodb://root:root@mongodb:27017/?authSource=admin
+      - ME_CONFIG_BASICAUTH_USERNAME=mxpress
+      - ME_CONFIG_BASICAUTH_PASSWORD=mxpress
+    networks:
+      - dobudobu
+    depends_on:
+      - mongodb
+    ports:
+      - "8083:8081"
+
+networks:
+  dobudobu:
+    driver: bridge
+
+volumes:
+  db_data:
