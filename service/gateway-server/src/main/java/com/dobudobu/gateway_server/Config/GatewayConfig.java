@@ -1,76 +1,65 @@
 package com.dobudobu.gateway_server.Config;
 
-import org.springframework.cloud.client.circuitbreaker.CircuitBreaker;
-import org.springframework.cloud.gateway.server.mvc.filter.CircuitBreakerFilterFunctions;
-import org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctions;
+
+import com.dobudobu.gateway_server.Filter.AuthenticationFilter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.gateway.route.RouteLocator;
+import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.cloud.gateway.server.mvc.handler.HandlerFunctions;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.servlet.function.RequestPredicates;
 import org.springframework.web.servlet.function.RouterFunction;
 import org.springframework.web.servlet.function.RouterFunctions;
 import org.springframework.web.servlet.function.ServerResponse;
 
-import java.net.URI;
-
-import static org.springframework.cloud.gateway.server.mvc.filter.FilterFunctions.setPath;
-import static org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctions.route;
-
 @Configuration
 public class GatewayConfig {
 
+    @Autowired
+    private AuthenticationFilter authenticationFilter;
+
     @Bean
-    public RouterFunction<ServerResponse> articleManagementPostServiceRoute(){
-        return route("article-management-service")
-                .route(RequestPredicates.path("/api/v1/article/create-article"), HandlerFunctions.http("http://localhost:8081"))
+    public RouteLocator routeLocator(RouteLocatorBuilder builder) {
+        return builder.routes()
+                // User Service dengan Authentication Filter
+                .route("user-service", r -> r.path("/api/v1/user/**")
+                        .filters(f -> f.filter(authenticationFilter.apply(new AuthenticationFilter.Config())))
+                        .uri("http://localhost:8083"))
+
+                // Role Service dengan Authentication Filter
+                .route("role-service", r -> r.path("/api/v1/role/**")
+                        .filters(f -> f.filter(authenticationFilter.apply(new AuthenticationFilter.Config())))
+                        .uri("http://localhost:8083"))
+
+                // Article Service dengan Authentication Filter
+                .route("article-service", r -> r.path("/api/v1/article/**")
+                        .filters(f -> f.filter(authenticationFilter.apply(new AuthenticationFilter.Config())))
+                        .uri("http://localhost:8081"))
+
+                // Swagger Documentation - Tanpa Filter
+                .route("swagger-user-service", r -> r.path("/aggregate/user-service/v3/api-docs")
+                        .uri("http://localhost:8083"))
+
+                .route("swagger-article-service", r -> r.path("/aggregate/article-management-service/v3/api-docs")
+                        .uri("http://localhost:8081"))
+
+                .route("swagger-file-service", r -> r.path("/aggregate/file-service/v3/api-docs")
+                        .uri("http://localhost:8082"))
+
+                // File Service dengan Authentication Filter
+                .route("file-service", r -> r.path("/api/v1/file/**")
+                        .filters(f -> f.filter(authenticationFilter.apply(new AuthenticationFilter.Config())))
+                        .uri("http://localhost:8082"))
+
                 .build();
     }
 
-    @Bean
-    public RouterFunction<ServerResponse> articleManagementServiceRoute(){
-        return route("article-management-service")
-                .route(RequestPredicates.path("/api/v1/article/**"), HandlerFunctions.http("http://localhost:8081"))
-                .filter(CircuitBreakerFilterFunctions.circuitBreaker("articleServiceCircuitBreaker",
-                        URI.create("forward:/fallbackRoute")))
-                .build();
-    }
-
-    @Bean
-    public RouterFunction<ServerResponse> articleServiceSwaggerRoute(){
-        return GatewayRouterFunctions.route("article-management-service")
-                .route(RequestPredicates.path("/aggregate/article-management-service/v3/api-docs"), HandlerFunctions.http("http://localhost:8081"))
-                .filter(CircuitBreakerFilterFunctions.circuitBreaker("articleServiceSwaggerCircuitBreaker",
-                        URI.create("forward:/fallbackRoute")))
-                .filter(setPath("/api-docs"))
-                .build();
-    }
-
-    @Bean
-    public RouterFunction<ServerResponse> fileServiceRoute(){
-        return route("file-service")
-                .route(RequestPredicates.path("/api/v1/file/**"), HandlerFunctions.http("http://localhost:8082"))
-//                .filter(CircuitBreakerFilterFunctions.circuitBreaker("fileServiceCircuitBreaker",
-//                        URI.create("forward:/fallbackRoute")))
-                .build();
-    }
-
-    @Bean
-    public RouterFunction<ServerResponse> fileServiceSwaggerRoute(){
-        return GatewayRouterFunctions.route("file-service")
-                .route(RequestPredicates.path("/aggregate/file-service/v3/api-docs"), HandlerFunctions.http("http://localhost:8082"))
-                .filter(CircuitBreakerFilterFunctions.circuitBreaker("articleServiceSwaggerCircuitBreaker",
-                        URI.create("forward:/fallbackRoute")))
-                .filter(setPath("/api-docs"))
-                .build();
-    }
-
+    // Fallback Route untuk Circuit Breaker
     @Bean
     public RouterFunction<ServerResponse> fallbackRoute() {
-        return RouterFunctions
-                .route(RequestPredicates.path("/fallbackRoute"),
-                        request -> ServerResponse.status(HttpStatus.SERVICE_UNAVAILABLE)
-                                .body("Service unavailable, please try again later"));
+        return RouterFunctions.route(RequestPredicates.path("/fallbackRoute"),
+                request -> ServerResponse.status(HttpStatus.SERVICE_UNAVAILABLE)
+                        .body("Service unavailable, please try again later"));
     }
-    
 }
