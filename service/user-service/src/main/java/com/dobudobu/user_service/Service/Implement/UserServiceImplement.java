@@ -108,7 +108,8 @@ public class UserServiceImplement implements UserService {
                     new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
             );
             if (authentication.isAuthenticated()) {
-                return jwtServiceImplement.generateToken(loginRequest.getEmail());
+                Optional<User> user = userRepository.findByEmail(loginRequest.getEmail());
+                return jwtServiceImplement.generateToken(loginRequest.getEmail(), user.get().getUserCode());
             } else {
                 throw new CustomAuthenticationFailed("Invalid Email or Password");
             }

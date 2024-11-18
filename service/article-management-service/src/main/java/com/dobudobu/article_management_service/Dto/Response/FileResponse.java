@@ -7,7 +7,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder
-public class FilePostResponse {
+public class FileResponse {
 
     private String publicId;
 

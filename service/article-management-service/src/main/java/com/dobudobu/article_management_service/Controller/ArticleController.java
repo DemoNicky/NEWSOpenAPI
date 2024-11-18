@@ -49,9 +49,10 @@ public class ArticleController {
             value = "/create-article",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
-    public ResponseEntity<ResponseHandling<?>> createArticle(@Valid @RequestPart("article")ArticleCreateRequest articleCreateRequest,
-                                                                                 @RequestPart("file")MultipartFile file){
-        ResponseHandling<?> responseHandling = articleService.createArticle(articleCreateRequest, file);
+    public ResponseEntity<ResponseHandling<?>> createArticle(@RequestHeader("userCode") String userCode,
+                                                             @Valid @RequestPart("article")ArticleCreateRequest articleCreateRequest,
+                                                             @RequestPart("file")MultipartFile file){
+        ResponseHandling<?> responseHandling = articleService.createArticle(userCode, articleCreateRequest, file);
         return ResponseEntity.status(HttpStatus.OK).body(responseHandling);
     }
 

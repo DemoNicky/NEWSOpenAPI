@@ -66,7 +66,7 @@ public class FileServiceImplement implements FileService {
     public ResponseHandling<FileGetResponse> getFIle(String publicId) {
         ResponseHandling<FileGetResponse> responseHandling = new ResponseHandling<>();
         Optional<File> file = fileRepository.findByPublicId(publicId);
-        if (file.isEmpty()){
+        if (file.isEmpty() || file.equals(null)){
             throw new CustomNotFoundException("file with id " + publicId + " not found");
         }
         FileGetResponse fileGetResponse = new FileGetResponse();

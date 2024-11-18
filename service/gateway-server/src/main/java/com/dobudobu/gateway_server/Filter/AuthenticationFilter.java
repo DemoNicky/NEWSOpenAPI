@@ -1,8 +1,8 @@
 package com.dobudobu.gateway_server.Filter;
 
-
 import com.dobudobu.gateway_server.Exception.ServiceCustomException.CustomFailedAuthenticationException;
 import com.dobudobu.gateway_server.Util.JwtUtil;
+import io.jsonwebtoken.Claims;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
@@ -24,33 +24,37 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
 
     @Override
     public GatewayFilter apply(Config config) {
-        return ((exchange, chain) -> {
-            if (validator.isSecured.test(exchange.getRequest())) { // Hanya untuk route yang membutuhkan autentikasi
+        return (exchange, chain) -> {
+            if (validator.isSecured.test(exchange.getRequest())) {
                 if (!exchange.getRequest().getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
-                    // Jika header Authorization tidak ada, lempar exception
                     throw new CustomFailedAuthenticationException("Missing Authorization Header");
                 }
 
                 String authHeaders = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
                 if (authHeaders != null && authHeaders.startsWith("Bearer ")) {
-                    authHeaders = authHeaders.substring(7); // Hapus prefix "Bearer "
+                    authHeaders = authHeaders.substring(7); // Remove "Bearer " prefix
                 } else {
                     throw new CustomFailedAuthenticationException("Invalid Authorization Header");
                 }
 
                 try {
-                    jwtUtil.validateToken(authHeaders); // Validasi token JWT
+                    // Validate token and extract userCode
+                    Claims claims = jwtUtil.extractAllClaims(authHeaders);
+                    String userCode = claims.get("userCode", String.class); // Extract userCode from JWT
+
+                    // Add userCode to the request header to pass it to the service
+                    exchange = exchange.mutate()
+                            .request(r -> r.header("userCode", userCode))  // Add userCode to header
+                            .build();
                 } catch (Exception e) {
-                    System.out.println("Invalid access: " + e.getMessage());
                     throw new CustomFailedAuthenticationException("Unauthorized access to app");
                 }
             }
-            return chain.filter(exchange); // Lanjutkan ke filter berikutnya jika validasi lolos
-        });
+            return chain.filter(exchange);
+        };
     }
 
     public static class Config {
-        // Tambahkan konfigurasi tambahan jika diperlukan
+        // Additional config if needed
     }
-
 }

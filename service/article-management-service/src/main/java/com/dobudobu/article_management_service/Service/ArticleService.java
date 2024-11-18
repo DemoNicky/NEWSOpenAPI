@@ -8,7 +8,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 public interface ArticleService {
-    ResponseHandling<?> createArticle(ArticleCreateRequest articleCreateRequest, MultipartFile file);
+    ResponseHandling<?> createArticle(String userCode, ArticleCreateRequest articleCreateRequest, MultipartFile file);
 
     ResponseHandling<List<GetListArticleResponse>> getArticle(int page);
 }

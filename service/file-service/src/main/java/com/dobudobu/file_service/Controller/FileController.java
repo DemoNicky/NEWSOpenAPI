@@ -39,7 +39,7 @@ public class FileController {
     }
 
     @GetMapping(value = "/get-file")
-    public ResponseEntity<ResponseHandling<FileGetResponse>> getFile(@RequestParam(value = "file", required = true) String publicId){
+    public ResponseEntity<ResponseHandling<FileGetResponse>> getFile(@RequestParam(value = "publicId", required = true) String publicId){
         if (publicId == null || publicId.isEmpty()) {
             throw new CustomFileNotValid("publicId cannot be null or empty");
         }

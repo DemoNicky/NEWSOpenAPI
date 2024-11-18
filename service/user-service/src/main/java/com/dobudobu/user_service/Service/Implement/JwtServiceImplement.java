@@ -24,8 +24,9 @@ public class JwtServiceImplement {
     }
 
     //digunakan untuk membuat token dari method createToken
-    public String generateToken(String userName){
+    public String generateToken(String userName, String userCode){
         Map<String, Object> claims = new HashMap<>();
+        claims.put("userCode", userCode);
         return createToken(claims, userName);
     }
 
